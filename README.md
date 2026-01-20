@@ -11,10 +11,10 @@ Distributed Computing Lab 3 — Implementation of the Raft Consensus Algorithm (
 ## Project Structure
 ```
 raft-lite/
-├── raft.py          # Main Raft node implementation
-├── client.py        # Client for sending commands to the cluster
-├── requirements.txt # Python dependencies
-└── README.md        # This documentation
+├── raft.py            # Main Raft node implementation
+├── client.py          # Client for sending commands to the cluster
+├── requirements.txt   # Python dependencies
+└── README.md          # This documentation
 ```
 
 ## Prerequisites
@@ -22,73 +22,65 @@ raft-lite/
 - pip package manager
 
 ## Installation
-Clone the repository (if applicable):
-
+Clone the repository:
 ```bash
 git clone <repository-url>
 cd raft-lite
 ```
 
 Install dependencies:
-
 ```bash
 pip install -r requirements.txt
 ```
 
 ## Running the Cluster
 
-### Start Raft Nodes
-Open multiple terminal windows and run each command in a separate terminal.
+Start Raft nodes in separate terminal windows. Example for a 3-node cluster:
 
 Node A (localhost:5000):
-
 ```bash
 python raft.py --id A --port 5000 --peers http://localhost:5001,http://localhost:5002
 ```
 
 Node B (localhost:5001):
-
 ```bash
 python raft.py --id B --port 5001 --peers http://localhost:5000,http://localhost:5002
 ```
 
 Node C (localhost:5002):
-
 ```bash
 python raft.py --id C --port 5002 --peers http://localhost:5000,http://localhost:5001
 ```
 
-### Command-Line Arguments
+## Command-Line Arguments
 - `--id`: Unique identifier for the node (A, B, C, etc.)
 - `--port`: Port number to run the HTTP server on
 - `--peers`: Comma-separated list of other node URLs
 
 ## Using the Client
-
-### Send Commands to the Cluster
+Send commands to the cluster:
 ```bash
 python client.py "SET x=100"
 ```
 The client will automatically discover the current leader and forward the command to it.
 
-### Available Commands
-- `SET <key>=<value>`: Set a key-value pair
-- `GET <key>`: Retrieve a value by key
-- `DEL <key>`: Delete a key-value pair
+### Supported Commands
+The system accepts any string command for replication. Examples:
+- `SET x=100`
+- `UPDATE status=active`
 
 ## API Endpoints
 
-### Client Endpoints
-- `POST /command` — Submit a new command to the cluster
+### Client-facing
+- `POST /submit` — Submit a new command to the cluster  
+  Example JSON:
+  ```json
+  {
+    "command": "SET x=100"
+  }
+  ```
 
-Example JSON:
-```json
-{
-  "command": "SET x=100"
-}
-```
-
-### Internal RPC Endpoints
+### Internal RPC (between nodes)
 - `POST /request_vote` — Request votes for leader election
 - `POST /append_entries` — Append entries to log (heartbeat & replication)
 
@@ -102,12 +94,12 @@ Example JSON:
 - Leaders send regular heartbeats to maintain authority.
 
 ### Log Replication
-- Client sends command to leader.
-- Leader appends command to its log.
-- Leader replicates log entry to followers.
+- Client sends a command to the leader.
+- Leader appends the command to its log.
+- Leader replicates the log entry to followers.
 - Once a majority of nodes have the entry, the leader commits it.
 - Leader notifies followers to commit the entry.
-- Leader responds to client.
+- Leader responds to the client.
 
 ## Testing
 
@@ -118,14 +110,14 @@ Example JSON:
    ```bash
    python client.py "SET test=hello"
    ```
-4. Verify the command replicates across all nodes.
+4. Verify the command replicates across all nodes (look for `[COMMIT]` in logs).
 
 ### Fault Tolerance Test
 1. Start the cluster and send some commands.
-2. Kill the leader process.
-3. Observe new leader election.
-4. Send more commands — they should still be processed.
-5. Restart the killed node — it should catch up with the log.
+2. Kill the leader process (Ctrl+C).
+3. Observe new leader election on remaining nodes.
+4. Send more commands to the new leader — they should still be processed.
+5. Restart the killed node — it should catch up with the log automatically.
 
 ## Monitoring
 Check each node's logs to see:
@@ -134,30 +126,7 @@ Check each node's logs to see:
 - Log replication progress
 - Heartbeat activity
 
-## Troubleshooting
-
-### Common Issues
-- **Port already in use**: Ensure no other service is using the specified ports.
-- **Nodes can't connect**: Verify all nodes are running and peer URLs are correct.
-- **No leader elected**: Check network connectivity between nodes.
-- **Commands not replicating**: Ensure majority of nodes are running.
-
-### Logs
-Each node outputs detailed logs showing:
-- Current state and term
-- Election activity
-- Log replication progress
-- Incoming/outgoing RPCs
-
-## Implementation Notes
-This implementation includes:
-- Basic Raft consensus algorithm
-- Leader election with randomized timeouts
-- Log replication with consistency checks
-- Persistent state (in-memory for simplicity)
-- HTTP-based RPC communication
-
 ## Limitations
-- State is stored in memory (not persistent across restarts)
-- No snapshotting mechanism for log compaction
-- Simplified network layer (no real network partitioning simulation)
+- State is stored in memory (not persistent across restarts).
+- No snapshotting mechanism for log compaction.
+- Simplified network layer (no real network partition simulation).
